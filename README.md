@@ -17,11 +17,15 @@ or Install all required dependencies: requirements.txt
 STORIES takes as an input an AnnData object, where omics information 
 and spatial coordinates are stored in obsm, 
 and obs contains time information.
+
 4.1 Data Prepossessing
 All the code in the GAE.
+
 4.2 Expression Predicted model
 run main.py
-4.2 spatial coordinates model
+
+4.3 spatial coordinates model
 run cnf_OT.py
-4.3 cell growth
+
+4.4 cell growth
 run growth.py
