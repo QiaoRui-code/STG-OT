@@ -8,8 +8,11 @@ No non-standard hardware is required.
 
 3.Installation
 Clone the repository (or download the ZIP file and extract it):
+ 
   git clone https://github.com/Qiaorui_code/STG-OT.git
+  
   cd STG-OT
+
 or Install all required dependencies: requirements.txt
 
 
@@ -19,13 +22,17 @@ and spatial coordinates are stored in obsm,
 and obs contains time information.
 
 4.1 Data Prepossessing
+
 All the code in the GAE.
 
 4.2 Expression Predicted model
+
 run main.py
 
 4.3 spatial coordinates model
+
 run cnf_OT.py
 
 4.4 cell growth
+
 run growth.py
