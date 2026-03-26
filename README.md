@@ -11,8 +11,11 @@ Clone the repository (or download the ZIP file and extract it):
   git clone https://github.com/Qiaorui_code/STG-OT.git
   cd STG-OT
 or Install all required dependencies: requirements.txt
+
+
 4.Getting started
-STORIES takes as an input an AnnData object, where omics information and spatial coordinates are stored in obsm, 
+STORIES takes as an input an AnnData object, where omics information 
+and spatial coordinates are stored in obsm, 
 and obs contains time information.
 4.1 Data Prepossessing
 All the code in the GAE.
