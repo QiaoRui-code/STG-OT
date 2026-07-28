@@ -28,7 +28,6 @@ if "PYTORCH_CUDA_ALLOC_CONF" in os.environ:
     del os.environ["PYTORCH_CUDA_ALLOC_CONF"]
 
 import torch
-# 下面是你原来的代码...
 def integrate_backwards(end_samples, model, savedir, ntimes=100, memory=0.1, device="cpu"):
     """Integrate some samples backwards and save the results."""
     with torch.no_grad():
@@ -133,8 +132,8 @@ def main(args,data_floder):
         # graph_discov(device, args, data, graph_causal_fit, model, regularization_coeffs, regularization_fns, logger,)
         causal_fit = graph_discov(device, args, data, graph_causal_fit, labels,  velocity, graph_causal_fit,model, regularization_coeffs,regularization_fns, logger)
         #device, args, data, graph, label, velocity, graph_causal_fit, model, regularization_coeffs, regularization_fns, logger
-        torch.save(model, "/home/lenovo/jora/data/Rgraph_checkpt_pca.pth",)
-        torch.save(causal_fit , "/home/lenovo/jora/data/Rcausal_fit_pca.pth", )
+        torch.save(model, "./data/Rgraph_checkpt_pca.pth",)
+        torch.save(causal_fit , "./data/Rcausal_fit_pca.pth", )
         #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')S
         #idx = np.arange(data.shape[0])[labels == np.unique(labels)[-1]]
         #data_train = np.delete(data, idx, axis=0)
@@ -200,7 +199,7 @@ def eval(args, data, labels, graph_causal_fit):
 if __name__ == "__main__":
     args = parser.parse_args()
     # main(args,datapath='/media/lenovo/6ED3FFE79A41910F/Lu/causal_1105/results/adata.h5ad')
-    datapath='/home/lenovo/jora/data/R5_filtered_latent.h5ad'
+    datapath='./data/R5_filtered_latent.h5ad'
     data, labels, causal_fit= main(args,datapath)
     #np.save(os.path.join(args.save, "predicted_data.npy"), z_pred.cpu().numpy())
     # scv.pl.velocity_embedding_stream(adata, basis="umap", color="celltype")
