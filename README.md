@@ -9,7 +9,7 @@ No non-standard hardware is required.
 3.Installation
 Clone the repository (or download the ZIP file and extract it):
  
-  git clone https://github.com/QiaoRui_code/STG-EUOT.git
+  git clone https://github.com/QiaoRui_code/STG-OT.git
   
   cd STG-OT
 
