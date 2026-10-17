@@ -23,7 +23,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import os
 
-# 强制移除导致冲突的显存配置变量
+
 if "PYTORCH_CUDA_ALLOC_CONF" in os.environ:
     del os.environ["PYTORCH_CUDA_ALLOC_CONF"]
 
