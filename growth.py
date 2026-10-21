@@ -11,7 +11,7 @@ import scanpy as sc
 from sklearn.decomposition import PCA
 from sinkhorn_knopp_unbalanced import sinkhorn_knopp_unbalanced
 def load_data():
-    adata = sc.read_h5ad('./sim_dataset/sim_dynamices_aligned.h5ad')
+    adata = sc.read_h5ad('./sim_dataset/sim_processed_adata_with_scaler.h5ad')
     labels = np.array(adata.obs["time_point"])
     data = adata.X
     #spatial_coords = adata.obsm['spatial']  
