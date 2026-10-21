@@ -396,7 +396,7 @@ class SpatialMorphogenesisGenerator:
 # ==============================================================================
 def main():
     BASE_DIR = './sin_dataset/'
-    DATA_PATH = os.path.join(BASE_DIR, 'sim_dynamices_aligned.h5ad')
+    DATA_PATH = os.path.join(BASE_DIR, 'sim_processed_adata_with_scaler.h5ad')
     SAVE_DIR = os.path.join(BASE_DIR)
     MODEL_SAVE_PATH = os.path.join(SAVE_DIR, 'sim_cnf_spatial.pth')
     os.makedirs(SAVE_DIR, exist_ok=True)
