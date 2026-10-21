@@ -59,10 +59,10 @@ def get_logger(logpath, filepath, package_files=[], displaying=True, saving=True
 
 def _get_data_points(adata, embedding_name):
     if embedding_name is None:
-        # 直接使用原始数据（adata.X）
+      
         data_points = adata.X
     else:
-        # 尝试从 obsm 中获取指定嵌入（如 "pca"）
+       
         obsm_key = f"X_{embedding_name}"
         if obsm_key not in adata.obsm:
             raise KeyError(
@@ -71,26 +71,30 @@ def _get_data_points(adata, embedding_name):
             )
         data_points = adata.obsm[obsm_key]
 
-    # 提取速度信息（如果有）
+
     velocity_points = None
-    if "velocity" in adata.layers:
-        velocity_points = adata.layers["velocity"]
-    elif f"velocity_{embedding_name}" in adata.obsm:
-        velocity_points = adata.obsm[f"velocity_{embedding_name}"]
+    
+   
+    #velocity_points = adata.obsm[f"velocity_{embedding_name}"]
 
     return data_points, velocity_points
 def load_data(args,path):
     adata = sc.read_h5ad(path)
-    labels = np.array(adata.obs["time"])
+    #adata=adata1[adata1.obs['time']!=1].copy()
+    labels = np.array(adata.obs["time_point"])
     data, velocity = _get_data_points(adata,args.embedding_name)
+    spatial_coords = adata.obsm['spatial_aligned_gt']
     if issparse(data):
         data = data.toarray()
     if velocity is not None and issparse(velocity):
         velocity = velocity.toarray()
-   
-    #scaler = StandardScaler()
-    #scaler.fit(data)
-    #data = scaler.transform(data)
+    
+    scaler = StandardScaler()
+    scaler.fit(data)
+    data = scaler.fit_transform(data)
+    adata.uns['latent_scaler_mean'] = scaler.mean_
+    adata.uns['latent_scaler_std'] = scaler.scale_
+    
     #     if self.velocity is not None:
     #         self.velocity = self.velocity / scaler.scale_
     # self.use_velocity = self.velocity is not None
@@ -103,7 +107,7 @@ def load_data(args,path):
         #data = data[:, :max_dim]
         #if args.use_velocity:
             #velocity = velocity[:, :max_dim]
-    return adata, data, labels, velocity
+    return adata, data, labels, velocity,spatial_coords
 
 def sample_index(n, data, label, label_subset, w=None):
     arr = np.arange(data.shape[0])[label == label_subset]
@@ -114,7 +118,38 @@ def sample_index(n, data, label, label_subset, w=None):
         w_ = w[p_sub].clone()
     w_ = w_ / w_.sum()
     return p_sub, w_
+def compute_jacobian_30d(diffeq_func, t, z, max_dim=50, create_graph=True):
+    batch_size, dim = z.shape
+    if dim > max_dim:
+        raise ValueError(f"dim {dim} too large; use Hutchinson estimator")
 
+   
+    z = z.requires_grad_(True)
+
+    
+    if not torch.is_tensor(t):
+        t = torch.tensor(t, dtype=z.dtype, device=z.device)
+    t = t.to(z)
+    t.requires_grad_(True)
+
+    f_val = diffeq_func(t, z)  # (batch, dim)
+
+    jac = []
+    for i in range(dim):
+        grad_output = torch.zeros_like(f_val)
+        grad_output[:, i] = 1.0
+        df_dz = torch.autograd.grad(
+            outputs=f_val,
+            inputs=z,
+            grad_outputs=grad_output,
+            retain_graph=True,
+            create_graph=create_graph,   
+            allow_unused=False
+        )[0]
+        jac.append(df_dz.unsqueeze(1))
+
+    J = torch.cat(jac, dim=1)  # (batch, dim, dim)
+    return J   
 
 def base_density():
     def standard_normal_logprob(z):
@@ -254,7 +289,7 @@ def count_total_time(model):
 
 def standard_normal_logprob(z):
     logZ = -0.5 * math.log(2 * math.pi)
-    return torch.sum(logZ - torch.tensor(z).pow(2) / 2, 1, keepdim=True)
+    return torch.mean(logZ - torch.tensor(z).pow(2) / 2, 1, keepdim=True)
 
 class RunningAverageMeter(object):
     """Computes and stores the average and current value"""
