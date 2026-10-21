@@ -11,8 +11,8 @@ import scanpy as sc
 from sklearn.decomposition import PCA
 from sinkhorn_knopp_unbalanced import sinkhorn_knopp_unbalanced
 def load_data():
-    adata = sc.read_h5ad('/media/lenovo/A06B2FA1620B6FCB/LU/retina_data/retina_aligned_pca.h5ad')
-    labels = np.array(adata.obs["Time"])
+    adata = sc.read_h5ad('./sim_dataset/sim_dynamices_aligned.h5ad')
+    labels = np.array(adata.obs["time_point"])
     data = adata.X
     #spatial_coords = adata.obsm['spatial']  
     
@@ -24,7 +24,8 @@ def load_data():
     #     if self.velocity is not None:
     #         self.velocity = self.velocity / scaler.scale_
     # self.use_velocity = self.velocity is not None
-    emb=adata.obsm['X_pca']
+    #emb=adata.obsm['X_pca']
+    emb=adata.X
     #pca = PCA(n_components=2)
     #emb_2d = pca.fit_transform(emb)
     
@@ -94,7 +95,7 @@ def get_all_growth_coeffs(alpha):
         gc = get_growth_coeffs(gamma, np.ones(m) / m)
         gcs.append(gc)
     return gcs
-gcs = get_all_growth_coeffs(1.5)
+gcs = get_all_growth_coeffs(1.0)
 gcs = np.concatenate(gcs)
 print(gcs)
 np.save('gcs_retina.npy', gcs)
@@ -110,8 +111,8 @@ def evaluate_alpha(alpha):
         "outlier_ratio": np.sum((gcs > np.mean(gcs) + 3*np.std(gcs)) | (gcs < np.mean(gcs) - 3*np.std(gcs))) / len(gcs)
     }
 
-# 测试所有候选值
-results = evaluate_alpha(1.5) 
+
+results = evaluate_alpha(1.0) 
 print(results)
 #gcs = np.load("gcs.npy")
 #print(gcs)
@@ -161,39 +162,5 @@ for it in range(10000):
         print(it, output)
 
 #torch.save(model, 'model')
-torch.save(model, '/media/lenovo/A06B2FA1620B6FCB/LU/retina_data/grow_model_1.5.pth')
+torch.save(model, './sim_datset/grow_model_1.0.pth')
 
-model.eval()
-import matplotlib
-
-for i, tp in enumerate(np.linspace(0, 51, 100)):
-    fig, axes = plt.subplots(
-        2, 1, gridspec_kw={"height_ratios": [7, 1]}, figsize=(8, 8)
-    )
-    ax = axes[0]
-    npts = 200
-    side = np.linspace(-4, 4, npts)
-    xx, yy = np.meshgrid(side, side)
-    xx = torch.from_numpy(xx).type(torch.float32).to(device)
-    yy = torch.from_numpy(yy).type(torch.float32).to(device)
-    z_grid = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1)], 1)
-    data_in = torch.cat([z_grid, tp * torch.ones(z_grid.shape[0], 1).to(device)], 1)
-    gr = model(data_in)
-    gr = gr.reshape(npts, npts).to("cpu").detach().numpy()
-    ax.pcolormesh(
-        xx.cpu().detach(), yy.cpu().detach(), gr, cmap="RdBu_r", vmin=0, vmax=2
-    )
-    scprep.plot.scatter2d(data, c="Gray", ax=ax, alpha=0.5)
-    ax.get_xaxis().set_ticks([])
-    ax.get_yaxis().set_ticks([])
-    ax.set_title("Growth Rate")
-    # ax.set_title("%0.2f" % tp, fontsize=32)
-    ax = axes[1]
-    # Colorbar
-    cb = matplotlib.colorbar.ColorbarBase(ax, cmap="Spectral", orientation="horizontal")
-    cb.set_ticks(np.linspace(0, 1, 4))
-    cb.set_ticklabels(np.arange(4))
-    ax.axvline(tp / 3, c="k", linewidth=15)
-    ax.set_title("Time")
-    plt.savefig("data/viz-%05d.jpg" % i)
-    plt.close()
