@@ -14,23 +14,48 @@ __all__ = ["ODEnet","ODEfunc"]
 class GraphConvolution(nn.Module):
     def __init__(self, input_dim, output_dim, graph, use_bias=True):
         super(GraphConvolution, self).__init__()
-
-        self._layer = nn.Linear(input_dim, output_dim)
-        self.conv1 = GCNConv(input_dim, output_dim, graph, bias=use_bias)
-        # self.conv2 = GCNConv(10, output_dim, graph, bias=use_bias)
+        self._layer = nn.Linear(input_dim, output_dim, bias=use_bias)
         self.graph = graph
         self.bias = nn.Linear(1, output_dim, bias=False)
         self.gate = nn.Linear(1, output_dim)
 
     def forward(self, t, input_feature):
+        A = self.graph.to(input_feature)
+        # A = torch.sigmoid(A)  # 如果需要限制到(0,1)
 
-        self.adjacency = torch.tensor(self.graph).clone().detach().requires_grad_(True).to(input_feature)
-        self.adjacency = self.adjacency-torch.diag(self.adjacency)+torch.eye(self.adjacency.shape[0]).to(input_feature)
-        support = torch.mm(input_feature, self.adjacency)
+        A = A - torch.diag_embed(torch.diagonal(A))
+        support = input_feature @ A
         output = self._layer(support)
-        return output * torch.sigmoid(self.gate(t.view(1, 1))) \
-            + self.bias(t.view(1, 1))
 
+        return output * torch.sigmoid(self.gate(t.view(1, 1))) + self.bias(t.view(1, 1))
+class CausalMix(nn.Module):
+  
+    def __init__(self, input_dim, output_dim, graph, use_bias=True, constrain_01=True):
+        super().__init__()
+        self.graph = graph
+        self.constrain_01 = constrain_01
+
+        self.self_dyn = nn.Parameter(torch.zeros(input_dim))
+        self.lin = nn.Linear(input_dim, output_dim, bias=use_bias)
+
+        
+        self.bias = nn.Linear(1, output_dim, bias=False)
+        self.gate = nn.Linear(1, output_dim)
+
+    def forward(self, t, x):
+        A = self.graph.to(x)
+
+        if self.constrain_01:
+            A = torch.sigmoid(A)
+
+       
+        A = A - torch.diag_embed(torch.diagonal(A))
+
+        support = x @ A + x * self.self_dyn.to(x)
+        out = self.lin(support)
+
+        return out * torch.sigmoid(self.gate(t.view(1, 1))) + self.bias(t.view(1, 1))
+    
 NONLINEARITIES = {
     "tanh": nn.Tanh(),
     "relu": nn.ReLU(),
@@ -43,53 +68,66 @@ NONLINEARITIES = {
 
 class ODEnet(nn.Module):
     """
-    Helper class to make neural nets for use in continuous normalizing flows
+    ODEnet for CNF:
+    - Layer 0: CausalMix (uses graph + self_dyn)
+    - Layers 1..: plain Linear + nonlinearity
     """
 
     def __init__(
-        self, hidden_dims, input_shape, graph, strides, conv, layer_type="GraphConvolution", nonlinearity="softplus", num_squeeze=0
+        self, hidden_dims, input_shape, graph, strides, conv,
+        layer_type="GraphConvolution", nonlinearity="softplus", num_squeeze=0
     ):
         super(ODEnet, self).__init__()
         self.num_squeeze = num_squeeze
 
-
-        # build layers and add them
         layers = []
         activation_fns = []
         hidden_shape = input_shape
+
         strides = [None] * (len(hidden_dims) + 1)
-        for dim_out, stride in zip(hidden_dims + (input_shape[0],), strides):
-            layer_kwargs = {}
-            base_layer = {
-                "GraphConvolution":GraphConvolution,
-            }[layer_type]
-            layer = base_layer(hidden_shape[0], dim_out, graph, **layer_kwargs)
+        dims_list = hidden_dims + (input_shape[0],)  # last layer back to data dim
+
+        for li, (dim_out, stride) in enumerate(zip(dims_list, strides)):
+            dim_in = hidden_shape[0]
+
+            if li == 0:
+                layer = CausalMix(
+                    input_dim=dim_in,
+                    output_dim=dim_out,
+                    graph=graph,
+                    use_bias=True,
+                    constrain_01=False,   
+                )
+            else:
+                layer = nn.Linear(dim_in, dim_out, bias=True)
+
             layers.append(layer)
             activation_fns.append(NONLINEARITIES[nonlinearity])
 
             hidden_shape = list(copy.copy(hidden_shape))
             hidden_shape[0] = dim_out
-            if stride == 2:
-                hidden_shape[1], hidden_shape[2] = hidden_shape[1] // 2, hidden_shape[2] // 2
-            elif stride == -2:
-                hidden_shape[1], hidden_shape[2] = hidden_shape[1] * 2, hidden_shape[2] * 2
 
         self.layers = nn.ModuleList(layers)
         self.activation_fns = nn.ModuleList(activation_fns[:-1])
 
     def forward(self, t, y):
         dx = y
-        # squeeze
+
         for _ in range(self.num_squeeze):
             dx = squeeze(dx, 2)
+
         for l, layer in enumerate(self.layers):
-            dx = layer(t, dx)
-            # if not last layer, use nonlinearity
+            if isinstance(layer, CausalMix) or isinstance(layer, GraphConvolution):
+                dx = layer(t, dx)
+            else:
+                dx = layer(dx)
+
             if l < len(self.layers) - 1:
                 dx = self.activation_fns[l](dx)
-        # unsqueeze
+
         for _ in range(self.num_squeeze):
             dx = unsqueeze(dx, 2)
+
         return dx
 
 
