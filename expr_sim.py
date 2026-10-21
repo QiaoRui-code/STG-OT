@@ -415,7 +415,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # main(args,datapath='/media/lenovo/6ED3FFE79A41910F/Lu/causal_1105/results/adata.h5ad')
     #datapath='/mnt/sda2/stVCR-m/datasets/Dwith_GAE_latent3.h5ad'
-    datapath='./sim_datset/sim_dynamices_aligned.h5ad'
+    datapath='./sim_datset/sim_dynamic_aligned.h5ad'
     data, labels, causal_fit= main(args,datapath)
     #np.save(os.path.join(args.save, "predicted_data.npy"), z_pred.cpu().numpy())
     # scv.pl.velocity_embedding_stream(adata, basis="umap", color="celltype")
