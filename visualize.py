@@ -600,5 +600,5 @@ def plot_causal_matrix(cmtx, class_names=None, figsize=None, vmin=None, vmax=Non
             #          horizontalalignment="center", color=color, )
             plt.text(j, i,np.around(cmtx[i, j],0), horizontalalignment="center", color=color, )
     plt.tight_layout()
-    plt.savefig( "/mnt/sda2/causal_1105/results/tmp/embry4/graph_interpret_granger/Rpred_cm_11.jpg", dpi=300)
+    plt.savefig( "./sim_datset/sim_pred_cm_2.jpg", dpi=300)
     # return figure
